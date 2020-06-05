@@ -48,8 +48,8 @@ estaTonificado = (>5).coefTonificacion
 --En cualquier otro caso se baja la cantidad de calorías 
 --quemadas dividido por el producto entre el peso y la edad del gimnasta. 
 
-quemarCalorias :: Gimnasta -> Float -> Gimnasta 
-quemarCalorias gimnasta calorias 
+quemarCalorias :: Float -> Gimnasta -> Gimnasta 
+quemarCalorias calorias gimnasta 
     | esObeso gimnasta = gimnasta{peso = (peso gimnasta) - (calorias / 150.0)}
     | masDeTreintaAnios gimnasta && calorias > 200 = gimnasta{peso = (peso gimnasta) - 1}
     | otherwise = gimnasta{peso = (peso gimnasta) - (calorias / (peso gimnasta * edad gimnasta))}
@@ -86,7 +86,8 @@ type Ejercicio =  Float -> Gimnasta -> Gimnasta
 --Gimnasta "Francisco" 40.0 118.6 1.0 ­­­ --quema 200 calorías (1*5*40) 
 
 caminataEnCinta :: Ejercicio
-caminataEnCinta minutos gimnasta = quemarCalorias gimnasta (calcularCalorias minutos 5.0) -- VelocidadPromedio == 5
+--caminataEnCinta minutos gimnasta = quemarCalorias (calcularCalorias minutos 5.0) gimnasta -- VelocidadPromedio == 5
+caminataEnCinta minutos = quemarCalorias (calcularCalorias minutos 5.0)
 
 calcularCalorias :: Float -> Float -> Float
 calcularCalorias minutos = (*minutos)
@@ -103,9 +104,10 @@ calcularCalorias minutos = (*minutos)
 -- siendo 14 la velocidad máxima alcanzada por los 8 incrementos durante los 40 minutos
 
 entrenamientoEnCinta :: Ejercicio
---entrenamientoEnCinta minutos gimnasta = quemarCalorias gimnasta (calcularCalorias minutos (velocidadPromedio minutos 6.0))
-entrenamientoEnCinta minutos gimnasta = 
-    quemarCalorias gimnasta (calcularCalorias minutos (velocidadPromedio minutos 6.0))
+-- entrenamientoEnCinta minutos gimnasta = 
+    -- quemarCalorias (calcularCalorias minutos (velocidadPromedio minutos 6.0)) gimnasta
+entrenamientoEnCinta minutos = 
+    quemarCalorias (calcularCalorias minutos (velocidadPromedio minutos 6.0))
 
 
 velocidadPromedio :: Float -> Float -> Float
@@ -133,7 +135,8 @@ tonificar kilos gimnasta =
 -- La colina quema 2 calorías por minuto multiplicado por la inclinación de la colina. 
 
 colina :: Float -> Ejercicio
-colina inclinacion minutos gimnasta = quemarCalorias gimnasta (2*minutos*inclinacion)
+-- colina inclinacion minutos gimnasta = quemarCalorias (2*minutos*inclinacion) gimnasta
+colina inclinacion minutos= quemarCalorias (2*minutos*inclinacion)
 
 -- Parte d
 {-
@@ -199,14 +202,15 @@ rutinaZarpada = UnaRutina{
     ejercicios = [caminataEnCinta , entrenamientoEnCinta , pesas 200.0 , colina 15.0 , montania 20.0]
 }
 -- ii
-realizarRutina :: Gimnasta -> Rutina ->  Gimnasta
-realizarRutina gimnasta rutina = 
-    arrancarRutina (duracionTotal rutina) (ejercicios rutina) gimnasta
+realizarRutina :: Rutina -> Gimnasta -> Gimnasta
+--realizarRutina rutina gimnasta = arrancarRutina (duracionTotal rutina) (ejercicios rutina) gimnasta
+realizarRutina rutina =
+     arrancarRutina (duracionTotal rutina) (ejercicios rutina) 
 
 arrancarRutina :: Float -> [Ejercicio] -> Gimnasta -> Gimnasta
 arrancarRutina _ [] gimnasta = gimnasta
-arrancarRutina minutos (cabezaEjercicio : colaEjercicio) gimnasta =  
-    arrancarRutina minutos colaEjercicio (cabezaEjercicio minutos gimnasta)
+arrancarRutina minutos (cabezaEjercicio : colaEjercicio) gimnasta = arrancarRutina minutos colaEjercicio (cabezaEjercicio minutos gimnasta)
+-- No me deja hacer point-free por la cantidad de argumentos :(
 
 --iii
 realizarRutinaFold :: Rutina -> Gimnasta -> Gimnasta
@@ -214,7 +218,8 @@ realizarRutinaFold rutina gimnasta =
     foldr (hacerEjercicio (duracionTotal rutina)) gimnasta (ejercicios rutina)
 
 hacerEjercicio :: Float -> Ejercicio -> Gimnasta -> Gimnasta
-hacerEjercicio minutos ejercicio gimnasta = ejercicio minutos gimnasta
+--hacerEjercicio minutos ejercicio gimnasta = ejercicio minutos gimnasta
+hacerEjercicio minutos ejercicio = ejercicio minutos
 
 --type Ejercicio =  Float -> Gimnasta -> Gimnasta
 -----------------------------------------------------------------------------------------------
@@ -225,11 +230,13 @@ hacerEjercicio minutos ejercicio gimnasta = ejercicio minutos gimnasta
 
 llegarASaludable :: Gimnasta -> [Rutina] -> [String]
 --llegarASaludable gimnasta rutinas =  map nombreRutina (filter (rutinaSaludable gimnasta) rutinas)
-llegarASaludable gimnasta = (map nombreRutina).(filter (rutinaSaludable gimnasta))
+llegarASaludable gimnasta = (map nombreRutina).(filter (`rutinaSaludable` gimnasta))
 
-rutinaSaludable :: Gimnasta -> Rutina -> Bool
+rutinaSaludable :: Rutina -> Gimnasta -> Bool
 --rutinaSaludable gimnasta rutina = saludable (realizarRutina gimnasta rutina)
-rutinaSaludable gimnasta = saludable.(realizarRutina gimnasta)
+rutinaSaludable rutina = saludable.(realizarRutina rutina)
+
+-- realizarRutina :: Rutina -> Gimnasta -> Gimnasta
 
 rutinasDisponibles = [rutinaPiola,rutinaCorta,rutinaZarpada]
 
